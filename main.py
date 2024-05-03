@@ -1,3 +1,5 @@
+import numpy as np
+import sounddevice as sd
 import speech_recognition as sr
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import torch
@@ -10,25 +12,32 @@ class PersonalAssistant:
         self.model = GPT2LMHeadModel.from_pretrained('gpt2')
         self.model.eval()
 
-        # Initialize the speech recognizer and text-to-speech engine
-        self.recognizer = sr.Recognizer()
+        # Initialize the text-to-speech engine
         self.engine = pyttsx3.init()
 
-    def listen(self):
-        with sr.Microphone() as source:
-            print("Listening...")
-            audio = self.recognizer.listen(source)
+        # Initialize the recognizer
+        self.recognizer = sr.Recognizer()
 
+    def listen(self):
+        # Record audio from the microphone
+        print("Listening...")
+        duration = 5  # seconds
+        fs = 44100  # Sample rate
+        myrecording = sd.rec(int(duration * fs), samplerate=fs, channels=2, dtype='int16')
+        sd.wait()  # Wait until recording is finished
+        audio_data = np.array(myrecording, dtype=np.float32)
+
+        # Use the audio data with the recognizer
+        audio = sr.AudioData(audio_data.tobytes(), fs, 2)
         try:
-            # Recognize speech using Google Web Speech API
             text = self.recognizer.recognize_google(audio)
             print(f"You said: {text}")
             return text
         except sr.UnknownValueError:
-            print("Google Speech Recognition could not understand audio")
+            print("Could not understand audio")
             return None
         except sr.RequestError as e:
-            print(f"Could not request results from Google Speech Recognition service; {e}")
+            print(f"Could not request results; {e}")
             return None
 
     def respond(self, text):
